@@ -1,0 +1,58 @@
+__build_svg_exact_prompt() {
+    local LAST_EXIT=$? # Keep track of previous command status
+    
+    # Truecolor (24-bit) ANSI Escapes matching the SVG palette
+    local RESET="\[\033[0m\]"
+    
+    # Background Colors
+    local BG_YELLOW="\[\033[48;2;243;174;53m\]"
+    local BG_ORANGE="\[\033[48;2;240;118;35m\]"
+    local BG_BLUE="\[\033[48;2;75;149;233m\]"
+    
+    # Foreground Colors
+    local FG_YELLOW="\[\033[38;2;243;174;53m\]"
+    local FG_ORANGE="\[\033[38;2;240;118;35m\]"
+    local FG_BLUE="\[\033[38;2;75;149;233m\]"
+    local FG_DARK="\[\033[38;2;38;43;68m\]"
+    local FG_LIGHT="\[\033[38;2;224;222;244m\]"
+    local FG_WHITE="\[\033[38;2;255;255;255m\]"
+
+    # Segment Caps & Dividers
+    local CAP_L=""
+    local DIV_ARROW=""
+    local CAP_R=""
+
+    # 1. User Segment (Yellow Background, Dark Text)
+    local SEG_USER="${FG_YELLOW}${CAP_L}${BG_YELLOW}${FG_DARK} \u ${RESET}"
+
+    # 2. Directory Path Segment (Orange Background, Light Text)
+    # Replaces absolute home paths with elegant '~' notation automatically
+    local SEG_DIR="${FG_YELLOW}${BG_ORANGE}${DIV_ARROW}${FG_LIGHT}  \w ${RESET}"
+
+    # 3. Git Status Segment (Conditional render depending on current workspace)
+    local GIT_DATA
+    GIT_DATA=$(__compute_git_metrics)
+    local SEG_GIT=""
+    if [ -n "$GIT_DATA" ]; then
+        SEG_GIT="${FG_ORANGE}${BG_YELLOW}${DIV_ARROW}${FG_DARK}${GIT_DATA}${RESET}"
+        # If Git is active, transitions directly into the Root/Admin indicator
+        local SEG_ROOT="${FG_YELLOW}${BG_YELLOW}${DIV_ARROW}${FG_LIGHT}  ${RESET}${FG_YELLOW}"
+    else
+        # If Git is empty, smoothly steps directly over to Root indicator
+        local SEG_ROOT="${FG_ORANGE}${BG_YELLOW}${DIV_ARROW}${FG_LIGHT}  ${RESET}${FG_YELLOW}"
+    fi
+
+    # 4. Status Indicator Segment (Blue Background if success, Red if error)
+    local SEG_STATUS
+    if [ "$LAST_EXIT" -eq 0 ]; then
+        SEG_STATUS="${BG_BLUE}${DIV_ARROW}${FG_LIGHT}  ${RESET}${FG_BLUE}${CAP_R}${RESET}"
+    else
+        # Adaptive UI: Red alert status icon variant if previous instruction failed
+        local BG_RED="\[\033[48;2;255;95;95m\]"
+        local FG_RED="\[\033[38;2;255;95;95m\]"
+        local SEG_STATUS="${FG_YELLOW}${BG_RED}${DIV_ARROW}${FG_WHITE}  ${RESET}${FG_RED}${CAP_R}${RESET}"
+    fi
+
+    # Assemble line 1 (Prompt) and line 2 (Interactive Input Field marker)
+    PS1="${SEG_USER}${SEG_DIR}${SEG_GIT}${SEG_ROOT}${SEG_STATUS}\n_ "
+}
