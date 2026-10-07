@@ -1,64 +1,89 @@
-__build_svg_exact_prompt() {
-    local LAST_EXIT=$?
-    local RESET="\[\033[0m\]"
+# Enable Git status details for __git_ps1
+GIT_PS1_SHOWDIRTYSTATE=1
+GIT_PS1_SHOWUNTRACKEDFILES=1
+GIT_PS1_SHOWUPSTREAM="auto"
+
+# Powerline / Nerd Font Symbols (from SVG)
+ROUND_L=$'\ue0b6'      # 
+ROUND_R=$'\ue0b4'      # 
+ARROW=$'\ue0b0'        # 
+ICON_DIR=$'\uea83'      #  (folder)
+ICON_GIT=$'\uf408'      #  (octocat)
+ICON_BOLT=$'\uf0e7'     #  (lightning)
+ICON_OK=$'\uf00c'       #  (check)
+ICON_ERR=$'\uf00d'      #  (cross)
+
+# 24-bit RGB Color Escapes wrapped in \[ \] so readline computes width correctly
+RESET='\[\e[0m\]'
+
+# Exact colors extracted from SVG
+# Yellow: #f3ae35 (243, 174, 53)
+# Orange: #f07623 (240, 118, 35)
+# Blue:   #4b95e9 (75, 149, 233)
+# Dark:   #262b44 (38, 43, 68)
+# White:  #e0def4 (224, 222, 244)
+# Red:    #e05666 (fallback error)
+
+FG_YELLOW='\[\e[38;2;243;174;53m\]'
+BG_YELLOW='\[\e[48;2;243;174;53m\]'
+
+FG_ORANGE='\[\e[38;2;240;118;35m\]'
+BG_ORANGE='\[\e[48;2;240;118;35m\]'
+
+FG_BLUE='\[\e[38;2;75;149;233m\]'
+BG_BLUE='\[\e[48;2;75;149;233m\]'
+
+FG_DARK='\[\e[38;2;38;43;68m\]'
+FG_WHITE='\[\e[38;2;224;222;244m\]'
+
+FG_RED='\[\e[38;2;224;86;102m\]'
+BG_RED='\[\e[48;2;224;86;102m\]'
+
+build_prompt() {
+    local exit_code=$?
     
-    # Background Colors
-    local BG_YELLOW="\[\033[48;2;243;174;53m\]"
-    local BG_ORANGE="\[\033[48;2;240;118;35m\]"
-    local BG_BLUE="\[\033[48;2;75;149;233m\]"
-    
-    # Foreground Colors
-    local FG_YELLOW="\[\033[38;2;243;174;53m\]"
-    local FG_ORANGE="\[\033[38;2;240;118;35m\]"
-    local FG_BLUE="\[\033[38;2;75;149;233m\]"
-    local FG_DARK="\[\033[38;2;38;43;68m\]"
-    local FG_LIGHT="\[\033[38;2;224;222;244m\]"
-    local FG_WHITE="\[\033[38;2;255;255;255m\]"
+    # 1. User Pill (Yellow background, Dark text)
+    local p="${FG_YELLOW}${ROUND_L}${BG_YELLOW}${FG_DARK} \u "
 
-    # Arrow symbols
-    local POWERLINE_ARROW=""
-    # Match the arrow color to the segment it leaves behind
-    local GAP_ARROW_1="${FG_YELLOW}>${RESET}"
-    local GAP_ARROW_2="${FG_YELLOW}>${RESET}"
+    # 2. Separator: Yellow -> Orange
+    p+="${FG_YELLOW}${BG_ORANGE}${ARROW}"
 
-    # ==========================================
-    # 1. USER SEGMENT
-    # ==========================================
-    # Ends with a powerline arrow, resets background, then outputs a gap arrow: > >
-    local SEG_USER="${BG_YELLOW}${FG_DARK} \u ${RESET}${FG_YELLOW}${POWERLINE_ARROW}${RESET} ${GAP_ARROW_1} "
+    # 3. Directory Pill (Orange background, Light text)
+    p+="${FG_WHITE} ${ICON_DIR} \w "
 
-    # ==========================================
-    # 2. DIRECTORY PATH SEGMENT
-    # ==========================================
-    local SEG_DIR="${BG_ORANGE}${FG_LIGHT}  \w ${RESET}"
-
-    # ==========================================
-    # 3. GIT STATUS SEGMENT (Bleeds out of Path)
-    # ==========================================
-    local GIT_DATA
-    GIT_DATA=$(__compute_git_metrics)
-    local SEG_GIT=""
-    if [ -n "$GIT_DATA" ]; then
-        SEG_GIT="${FG_ORANGE}${BG_YELLOW}${POWERLINE_ARROW}${FG_DARK}${GIT_DATA}${RESET}"
-        # Ends the combined path+git block with a sharp arrow, followed by a gap arrow: > >
-        local SEG_ROOT="${FG_YELLOW}${BG_YELLOW}${POWERLINE_ARROW}${FG_LIGHT}  ${RESET}${FG_YELLOW}${POWERLINE_ARROW}${RESET} ${GAP_ARROW_2} "
-    else
-        # Ends path block early if git data is absent, followed by a gap arrow: > >
-        local SEG_ROOT="${FG_ORANGE}${BG_YELLOW}${POWERLINE_ARROW}${FG_LIGHT}  ${RESET}${FG_YELLOW}${POWERLINE_ARROW}${RESET} ${GAP_ARROW_2} "
+    # 4. Git Info (Using built-in git prompt if available)
+    local git_info=""
+    if declare -F __git_ps1 >/dev/null 2>&1; then
+        git_info=$(__git_ps1 "%s")
     fi
 
-    # ==========================================
-    # 4. STATUS INDICATOR SEGMENT
-    # ==========================================
-    local SEG_STATUS
-    if [ "$LAST_EXIT" -eq 0 ]; then
-        SEG_STATUS="${BG_BLUE}${FG_LIGHT}  ${RESET}${FG_BLUE}${POWERLINE_ARROW}${RESET}"
+    local last_bg
+    if [ -n "$git_info" ]; then
+        # Separator: Orange -> Yellow
+        p+="${FG_ORANGE}${BG_YELLOW}${ARROW}"
+        # Git segment: Octocat, branch & status, followed by lightning bolt
+        p+="${FG_DARK} ${ICON_GIT} ${git_info} ${FG_WHITE}${ICON_BOLT} "
+        last_bg="$FG_YELLOW"
     else
-        local BG_RED="\[\033[48;2;255;95;95m\]"
-        local FG_RED="\[\033[38;2;255;95;95m\]"
-        local SEG_STATUS="${BG_RED}${FG_WHITE}  ${RESET}${FG_RED}${POWERLINE_ARROW}${RESET}"
+        last_bg="$FG_ORANGE"
     fi
 
-    # Assemble line 1 and line 2
-    PS1="${SEG_USER}${SEG_DIR}${SEG_GIT}${SEG_ROOT}${SEG_STATUS}\n_ "
+    # 5. Status Pill (Blue on success / Red on error)
+    if [ $exit_code -eq 0 ]; then
+        p+="${last_bg}${BG_BLUE}${ARROW}"
+        p+="${FG_WHITE} ${ICON_OK} "
+        p+="${RESET}${FG_BLUE}${ROUND_R}"
+    else
+        p+="${last_bg}${BG_RED}${ARROW}"
+        p+="${FG_WHITE} ${ICON_ERR} "
+        p+="${RESET}${FG_RED}${ROUND_R}"
+    fi
+
+    # Trailing space
+    p+="${RESET} "
+
+    PS1="$p"
 }
+
+# Assign to PROMPT_COMMAND as standard in git-prompt.sh
+PROMPT_COMMAND="build_prompt"
