@@ -1,4 +1,3 @@
-# Enable Git status details for __git_ps1
 GIT_PS1_SHOWDIRTYSTATE=1
 GIT_PS1_SHOWUNTRACKEDFILES=1
 GIT_PS1_SHOWUPSTREAM="auto"
@@ -7,23 +6,15 @@ GIT_PS1_SHOWUPSTREAM="auto"
 ROUND_L=$'\ue0b6'      # 
 ROUND_R=$'\ue0b4'      # 
 ARROW=$'\ue0b0'        # 
-ICON_DIR=$'\uea83'      #  (folder)
-ICON_GIT=$'\uf408'      #  (octocat)
-ICON_BOLT=$'\uf0e7'     #  (lightning)
-ICON_OK=$'\uf00c'       #  (check)
-ICON_ERR=$'\uf00d'      #  (cross)
+ICON_DIR=$'\uea83'      # 
+ICON_GIT=$'\uf408'      # 
+ICON_BOLT=$'\uf0e7'     # 
+ICON_OK=$'\uf00c'       # 
+ICON_ERR=$'\uf00d'      # 
 
-# 24-bit RGB Color Escapes wrapped in \[ \] so readline computes width correctly
 RESET='\[\e[0m\]'
 
-# Exact colors extracted from SVG
-# Yellow: #f3ae35 (243, 174, 53)
-# Orange: #f07623 (240, 118, 35)
-# Blue:   #4b95e9 (75, 149, 233)
-# Dark:   #262b44 (38, 43, 68)
-# White:  #e0def4 (224, 222, 244)
-# Red:    #e05666 (fallback error)
-
+# Exact palette from SVG
 FG_YELLOW='\[\e[38;2;243;174;53m\]'
 BG_YELLOW='\[\e[48;2;243;174;53m\]'
 
@@ -41,49 +32,48 @@ BG_RED='\[\e[48;2;224;86;102m\]'
 
 build_prompt() {
     local exit_code=$?
-    
-    # 1. User Pill (Yellow background, Dark text)
-    local p="${FG_YELLOW}${ROUND_L}${BG_YELLOW}${FG_DARK} \u "
+
+    # 1. User Pill: " alice " with symmetric spaces
+    local p="${FG_YELLOW}${ROUND_L}${BG_YELLOW}${FG_DARK} \u  "
 
     # 2. Separator: Yellow -> Orange
     p+="${FG_YELLOW}${BG_ORANGE}${ARROW}"
 
-    # 3. Directory Pill (Orange background, Light text)
-    p+="${FG_WHITE} ${ICON_DIR} \w "
+    # 3. Directory Pill: "  ~/path "
+    p+="${FG_WHITE}  ${ICON_DIR} \w  "
 
-    # 4. Git Info (Using built-in git prompt if available)
+    # 4. Optional Git Segment
     local git_info=""
     if declare -F __git_ps1 >/dev/null 2>&1; then
         git_info=$(__git_ps1 "%s")
     fi
 
-    local last_bg
+    local last_fg
     if [ -n "$git_info" ]; then
         # Separator: Orange -> Yellow
         p+="${FG_ORANGE}${BG_YELLOW}${ARROW}"
-        # Git segment: Octocat, branch & status, followed by lightning bolt
-        p+="${FG_DARK} ${ICON_GIT} ${git_info} ${FG_WHITE}${ICON_BOLT} "
-        last_bg="$FG_YELLOW"
+        # Git Segment + Bolt icon with trailing space before separator
+        p+="${FG_DARK}  ${ICON_GIT} ${git_info} ${FG_WHITE}${ICON_BOLT}  "
+        last_fg="$FG_YELLOW"
     else
-        last_bg="$FG_ORANGE"
+        last_fg="$FG_ORANGE"
     fi
 
-    # 5. Status Pill (Blue on success / Red on error)
+    # 5. Status Pill: Separator -> Status Icon -> Rounded Right Cap
     if [ $exit_code -eq 0 ]; then
-        p+="${last_bg}${BG_BLUE}${ARROW}"
-        p+="${FG_WHITE} ${ICON_OK} "
+        p+="${last_fg}${BG_BLUE}${ARROW}"
+        p+="${FG_WHITE}  ${ICON_OK}  "
         p+="${RESET}${FG_BLUE}${ROUND_R}"
     else
-        p+="${last_bg}${BG_RED}${ARROW}"
-        p+="${FG_WHITE} ${ICON_ERR} "
+        p+="${last_fg}${BG_RED}${ARROW}"
+        p+="${FG_WHITE}  ${ICON_ERR}  "
         p+="${RESET}${FG_RED}${ROUND_R}"
     fi
 
-    # Trailing space
+    # Trailing prompt space before cursor input
     p+="${RESET} "
 
     PS1="$p"
 }
 
-# Assign to PROMPT_COMMAND as standard in git-prompt.sh
 PROMPT_COMMAND="build_prompt"
