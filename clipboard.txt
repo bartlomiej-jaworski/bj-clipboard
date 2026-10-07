@@ -1,7 +1,5 @@
 __build_svg_exact_prompt() {
     local LAST_EXIT=$?
-    
-    # Truecolor (24-bit) ANSI Escapes matching the SVG palette
     local RESET="\[\033[0m\]"
     
     # Background Colors
@@ -17,47 +15,48 @@ __build_svg_exact_prompt() {
     local FG_LIGHT="\[\033[38;2;224;222;244m\]"
     local FG_WHITE="\[\033[38;2;255;255;255m\]"
 
-    # Segment Caps & Dividers
-    local CAP_L=""
-    local DIV_ARROW=""
-    local CAP_R=""
+    # Arrow symbols
+    local POWERLINE_ARROW=""
+    # Match the arrow color to the segment it leaves behind
+    local GAP_ARROW_1="${FG_YELLOW}>${RESET}"
+    local GAP_ARROW_2="${FG_YELLOW}>${RESET}"
 
     # ==========================================
     # 1. USER SEGMENT
     # ==========================================
-    # Closes with a right cap and an added normal string space " "
-    local SEG_USER="${FG_YELLOW}${CAP_L}${BG_YELLOW}${FG_DARK} \u ${RESET}${FG_YELLOW}${CAP_R}${RESET} "
+    # Ends with a powerline arrow, resets background, then outputs a gap arrow: > >
+    local SEG_USER="${BG_YELLOW}${FG_DARK} \u ${RESET}${FG_YELLOW}${POWERLINE_ARROW}${RESET} ${GAP_ARROW_1} "
 
     # ==========================================
     # 2. DIRECTORY PATH SEGMENT
     # ==========================================
-    # Starts cleanly with a fresh left cap instead of an arrow extension
-    local SEG_DIR="${FG_ORANGE}${CAP_L}${BG_ORANGE}${FG_LIGHT}  \w ${RESET}"
+    local SEG_DIR="${BG_ORANGE}${FG_LIGHT}  \w ${RESET}"
 
     # ==========================================
-    # 3. GIT STATUS SEGMENT 
+    # 3. GIT STATUS SEGMENT (Bleeds out of Path)
     # ==========================================
     local GIT_DATA
     GIT_DATA=$(__compute_git_metrics)
     local SEG_GIT=""
     if [ -n "$GIT_DATA" ]; then
-        SEG_GIT="${FG_ORANGE}${BG_YELLOW}${DIV_ARROW}${FG_DARK}${GIT_DATA}${RESET}"
-        local SEG_ROOT="${FG_YELLOW}${BG_YELLOW}${DIV_ARROW}${FG_LIGHT}  ${RESET}${FG_YELLOW}${CAP_R}${RESET} "
+        SEG_GIT="${FG_ORANGE}${BG_YELLOW}${POWERLINE_ARROW}${FG_DARK}${GIT_DATA}${RESET}"
+        # Ends the combined path+git block with a sharp arrow, followed by a gap arrow: > >
+        local SEG_ROOT="${FG_YELLOW}${BG_YELLOW}${POWERLINE_ARROW}${FG_LIGHT}  ${RESET}${FG_YELLOW}${POWERLINE_ARROW}${RESET} ${GAP_ARROW_2} "
     else
-        local SEG_ROOT="${FG_ORANGE}${BG_YELLOW}${DIV_ARROW}${FG_LIGHT}  ${RESET}${FG_YELLOW}${CAP_R}${RESET} "
+        # Ends path block early if git data is absent, followed by a gap arrow: > >
+        local SEG_ROOT="${FG_ORANGE}${BG_YELLOW}${POWERLINE_ARROW}${FG_LIGHT}  ${RESET}${FG_YELLOW}${POWERLINE_ARROW}${RESET} ${GAP_ARROW_2} "
     fi
 
     # ==========================================
-    # 4. STATUS INDICATOR SEGMENT (Isolated with spaces)
+    # 4. STATUS INDICATOR SEGMENT
     # ==========================================
-    # Starts with a fresh left cap after the gap space
     local SEG_STATUS
     if [ "$LAST_EXIT" -eq 0 ]; then
-        SEG_STATUS="${FG_BLUE}${CAP_L}${BG_BLUE}${FG_LIGHT}  ${RESET}${FG_BLUE}${CAP_R}${RESET}"
+        SEG_STATUS="${BG_BLUE}${FG_LIGHT}  ${RESET}${FG_BLUE}${POWERLINE_ARROW}${RESET}"
     else
         local BG_RED="\[\033[48;2;255;95;95m\]"
         local FG_RED="\[\033[38;2;255;95;95m\]"
-        local SEG_STATUS="${FG_RED}${CAP_L}${BG_RED}${FG_WHITE}  ${RESET}${FG_RED}${CAP_R}${RESET}"
+        local SEG_STATUS="${BG_RED}${FG_WHITE}  ${RESET}${FG_RED}${POWERLINE_ARROW}${RESET}"
     fi
 
     # Assemble line 1 and line 2
