@@ -1,0 +1,92 @@
+# Disable expensive recursive disk/network checks
+unset GIT_PS1_SHOWUNTRACKEDFILES
+unset GIT_PS1_SHOWUPSTREAM
+# Optional: comment out the line below if you want maximum speed in huge repos
+GIT_PS1_SHOWDIRTYSTATE=1
+
+# Nerd Font / Powerline Glyphs (literal characters for 100% shell reliability)
+ROUND_L=""
+ROUND_R=""
+ARROW=""
+ICON_DIR=""
+ICON_GIT=""
+ICON_BOLT=""
+ICON_OK=""
+ICON_ERR=""
+
+# Readline non-printing wrappers \001 and \002
+wrap_esc() {
+    printf '\001\e[%sm\002' "$1"
+}
+
+RESET=$(wrap_esc "0")
+FG_YELLOW=$(wrap_esc "38;2;243;174;53")
+BG_YELLOW=$(wrap_esc "48;2;243;174;53")
+
+FG_ORANGE=$(wrap_esc "38;2;240;118;35")
+BG_ORANGE=$(wrap_esc "48;2;240;118;35")
+
+FG_BLUE=$(wrap_esc "38;2;75;149;233")
+BG_BLUE=$(wrap_esc "48;2;75;149;233")
+
+FG_DARK=$(wrap_esc "38;2;38;43;68")
+FG_WHITE=$(wrap_esc "38;2;224;222;244")
+
+FG_RED=$(wrap_esc "38;2;224;86;102")
+BG_RED=$(wrap_esc "48;2;224;86;102")
+
+build_prompt() {
+    local exit_code=$?
+
+    # 1. User Pill (alice)
+    local p="${FG_YELLOW}${ROUND_L}${BG_YELLOW}${FG_DARK} \u  "
+
+    # 2. Separator: Yellow -> Orange
+    p+="${FG_YELLOW}${BG_ORANGE}${ARROW}"
+
+    # 3. Directory Pill (path)
+    p+="${FG_WHITE}  ${ICON_DIR} \w  "
+
+    # 4. Fast Git Segment
+    # Only query git if a .git directory or file exists in the hierarchy
+    local git_branch=""
+    local git_dirty=""
+
+    # Check for git repository (fast check)
+    if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        # Fetch current branch name fast without spawning heavy __git_ps1
+        git_branch=$(git symbolic-ref --short -q HEAD 2>/dev/null || git rev-parse --short -q HEAD 2>/dev/null)
+
+        # Quick dirty check (only if GIT_PS1_SHOWDIRTYSTATE is enabled)
+        if [ "$GIT_PS1_SHOWDIRTYSTATE" = "1" ]; then
+            if ! git diff-index --quiet --cached HEAD 2>/dev/null || ! git diff-files --quiet 2>/dev/null; then
+                git_dirty="*"
+            fi
+        fi
+    fi
+
+    local last_fg
+    if [ -n "$git_branch" ]; then
+        p+="${FG_ORANGE}${BG_YELLOW}${ARROW}"
+        p+="${FG_DARK}  ${ICON_GIT} ${git_branch}${git_dirty} ${FG_WHITE}${ICON_BOLT}  "
+        last_fg="$FG_YELLOW"
+    else
+        last_fg="$FG_ORANGE"
+    fi
+
+    # 5. Status Pill (check / cross)
+    if [ $exit_code -eq 0 ]; then
+        p+="${last_fg}${BG_BLUE}${ARROW}"
+        p+="${FG_WHITE}  ${ICON_OK}  "
+        p+="${RESET}${FG_BLUE}${ROUND_R}"
+    else
+        p+="${last_fg}${BG_RED}${ARROW}"
+        p+="${FG_WHITE}  ${ICON_ERR}  "
+        p+="${RESET}${FG_RED}${ROUND_R}"
+    fi
+
+    p+="${RESET} "
+    PS1="$p"
+}
+
+PROMPT_COMMAND="build_prompt"
