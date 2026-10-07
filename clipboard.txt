@@ -1,5 +1,5 @@
 __build_svg_exact_prompt() {
-    local LAST_EXIT=$? # Keep track of previous command status
+    local LAST_EXIT=$?
     
     # Truecolor (24-bit) ANSI Escapes matching the SVG palette
     local RESET="\[\033[0m\]"
@@ -22,37 +22,44 @@ __build_svg_exact_prompt() {
     local DIV_ARROW=""
     local CAP_R=""
 
-    # 1. User Segment (Yellow Background, Dark Text)
-    local SEG_USER="${FG_YELLOW}${CAP_L}${BG_YELLOW}${FG_DARK} \u ${RESET}"
+    # ==========================================
+    # 1. USER SEGMENT
+    # ==========================================
+    # Closes with a right cap and an added normal string space " "
+    local SEG_USER="${FG_YELLOW}${CAP_L}${BG_YELLOW}${FG_DARK} \u ${RESET}${FG_YELLOW}${CAP_R}${RESET} "
 
-    # 2. Directory Path Segment (Orange Background, Light Text)
-    # Replaces absolute home paths with elegant '~' notation automatically
-    local SEG_DIR="${FG_YELLOW}${BG_ORANGE}${DIV_ARROW}${FG_LIGHT}  \w ${RESET}"
+    # ==========================================
+    # 2. DIRECTORY PATH SEGMENT
+    # ==========================================
+    # Starts cleanly with a fresh left cap instead of an arrow extension
+    local SEG_DIR="${FG_ORANGE}${CAP_L}${BG_ORANGE}${FG_LIGHT}  \w ${RESET}"
 
-    # 3. Git Status Segment (Conditional render depending on current workspace)
+    # ==========================================
+    # 3. GIT STATUS SEGMENT 
+    # ==========================================
     local GIT_DATA
     GIT_DATA=$(__compute_git_metrics)
     local SEG_GIT=""
     if [ -n "$GIT_DATA" ]; then
         SEG_GIT="${FG_ORANGE}${BG_YELLOW}${DIV_ARROW}${FG_DARK}${GIT_DATA}${RESET}"
-        # If Git is active, transitions directly into the Root/Admin indicator
-        local SEG_ROOT="${FG_YELLOW}${BG_YELLOW}${DIV_ARROW}${FG_LIGHT}  ${RESET}${FG_YELLOW}"
+        local SEG_ROOT="${FG_YELLOW}${BG_YELLOW}${DIV_ARROW}${FG_LIGHT}  ${RESET}${FG_YELLOW}${CAP_R}${RESET} "
     else
-        # If Git is empty, smoothly steps directly over to Root indicator
-        local SEG_ROOT="${FG_ORANGE}${BG_YELLOW}${DIV_ARROW}${FG_LIGHT}  ${RESET}${FG_YELLOW}"
+        local SEG_ROOT="${FG_ORANGE}${BG_YELLOW}${DIV_ARROW}${FG_LIGHT}  ${RESET}${FG_YELLOW}${CAP_R}${RESET} "
     fi
 
-    # 4. Status Indicator Segment (Blue Background if success, Red if error)
+    # ==========================================
+    # 4. STATUS INDICATOR SEGMENT (Isolated with spaces)
+    # ==========================================
+    # Starts with a fresh left cap after the gap space
     local SEG_STATUS
     if [ "$LAST_EXIT" -eq 0 ]; then
-        SEG_STATUS="${BG_BLUE}${DIV_ARROW}${FG_LIGHT}  ${RESET}${FG_BLUE}${CAP_R}${RESET}"
+        SEG_STATUS="${FG_BLUE}${CAP_L}${BG_BLUE}${FG_LIGHT}  ${RESET}${FG_BLUE}${CAP_R}${RESET}"
     else
-        # Adaptive UI: Red alert status icon variant if previous instruction failed
         local BG_RED="\[\033[48;2;255;95;95m\]"
         local FG_RED="\[\033[38;2;255;95;95m\]"
-        local SEG_STATUS="${FG_YELLOW}${BG_RED}${DIV_ARROW}${FG_WHITE}  ${RESET}${FG_RED}${CAP_R}${RESET}"
+        local SEG_STATUS="${FG_RED}${CAP_L}${BG_RED}${FG_WHITE}  ${RESET}${FG_RED}${CAP_R}${RESET}"
     fi
 
-    # Assemble line 1 (Prompt) and line 2 (Interactive Input Field marker)
+    # Assemble line 1 and line 2
     PS1="${SEG_USER}${SEG_DIR}${SEG_GIT}${SEG_ROOT}${SEG_STATUS}\n_ "
 }
